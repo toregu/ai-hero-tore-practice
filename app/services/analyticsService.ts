@@ -27,7 +27,7 @@ export function parseAnalyticsRange(value: string | null): AnalyticsRange {
 // their historical earnings and outcomes remain visible.
 const INCLUDED_STATUSES = [CourseStatus.Published, CourseStatus.Archived];
 
-function ownedIncludedCourses(instructorId: number) {
+export function ownedIncludedCourses(instructorId: number) {
   return and(
     eq(courses.instructorId, instructorId),
     inArray(courses.status, INCLUDED_STATUSES)
@@ -46,7 +46,7 @@ const RANGE_DAYS: Record<AnalyticsRange, number | null> = {
 type Window = { from: string | null; to: string };
 
 /** The selected range, and the equal-length window just before it (none for all time). */
-function windowsFor(range: AnalyticsRange, now: Date) {
+export function windowsFor(range: AnalyticsRange, now: Date) {
   const days = RANGE_DAYS[range];
   const to = now.toISOString();
   if (days === null) {
@@ -60,7 +60,7 @@ function windowsFor(range: AnalyticsRange, now: Date) {
   };
 }
 
-function inWindow(column: SQLiteColumn, window: Window) {
+export function inWindow(column: SQLiteColumn, window: Window) {
   return and(
     lt(column, window.to),
     window.from ? gte(column, window.from) : undefined

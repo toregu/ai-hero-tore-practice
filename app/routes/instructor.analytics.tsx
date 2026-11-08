@@ -8,6 +8,8 @@ import {
   type AnalyticsRange,
   type RangedMetric,
 } from "~/services/analyticsService";
+import { getInstructorTrend } from "~/services/analyticsTrendService";
+import { AnalyticsTrendChart } from "~/components/analytics-trend-chart";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { Skeleton } from "~/components/ui/skeleton";
@@ -34,7 +36,14 @@ export async function loader({ request }: Route.LoaderArgs) {
   const { userId } = await requireInstructor(request);
   const range = parseAnalyticsRange(new URL(request.url).searchParams.get("range"));
 
-  return { range, overview: getInstructorOverview(userId, range) };
+  // One clock for both, so the chart's buckets cover exactly the tiles' window.
+  const now = new Date();
+
+  return {
+    range,
+    overview: getInstructorOverview(userId, range, now),
+    trend: getInstructorTrend(userId, range, now),
+  };
 }
 
 function formatRevenue(cents: number) {
@@ -132,7 +141,7 @@ export function HydrateFallback() {
 }
 
 export default function InstructorAnalytics({ loaderData }: Route.ComponentProps) {
-  const { range, overview } = loaderData;
+  const { range, overview, trend } = loaderData;
   const rangeLabel = RANGE_LABELS[range];
 
   return (
@@ -216,6 +225,16 @@ export default function InstructorAnalytics({ loaderData }: Route.ComponentProps
                 Open questions queue →
               </Link>
             }
+          />
+        </div>
+      )}
+
+      {overview.courseCount > 0 && (
+        <div className="mt-6">
+          <AnalyticsTrendChart
+            granularity={trend.granularity}
+            buckets={trend.buckets}
+            rangeLabel={rangeLabel}
           />
         </div>
       )}
