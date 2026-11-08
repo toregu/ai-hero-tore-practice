@@ -214,13 +214,22 @@ export default function InstructorDashboard({
                   </div>
                 </div>
               </CardContent>
-              <CardFooter>
-                <Link to={`/instructor/${course.id}`} className="w-full">
+              <CardFooter className="gap-2">
+                <Link to={`/instructor/${course.id}`} className="flex-1">
                   <Button className="w-full" variant="outline">
                     <BookOpen className="mr-2 size-4" />
                     Edit Course
                   </Button>
                 </Link>
+                {/* Drafts are left out of analytics, so they get no analytics page. */}
+                {course.status !== CourseStatus.Draft && (
+                  <Link to={`/instructor/${course.id}/analytics`} className="flex-1">
+                    <Button className="w-full" variant="outline">
+                      <BarChart3 className="mr-2 size-4" />
+                      Analytics
+                    </Button>
+                  </Link>
+                )}
               </CardFooter>
             </Card>
           ))}
