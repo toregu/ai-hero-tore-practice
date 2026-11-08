@@ -3,6 +3,10 @@ import type { Route } from "./+types/instructor.$courseId.analytics";
 import { requireInstructor } from "~/lib/access.server";
 import { parseAnalyticsRange } from "~/services/analyticsService";
 import { getCourseAnalytics } from "~/services/courseAnalyticsService";
+import { getLessonFunnel } from "~/services/lessonFunnelService";
+import { getQuizStats } from "~/services/quizStatsService";
+import { LessonFunnelChart } from "~/components/lesson-funnel-chart";
+import { QuizStatsTable } from "~/components/quiz-stats-table";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent } from "~/components/ui/card";
 import { Skeleton } from "~/components/ui/skeleton";
@@ -40,7 +44,15 @@ export async function loader({ params, request }: Route.LoaderArgs) {
     throw data("Course not found.", { status: 404 });
   }
 
-  return { range, analytics };
+  // Ownership is established above. The funnel and quiz stats are all-time and
+  // only shown once the course has enrollments.
+  const hasData = analytics.totalEnrollments > 0;
+  return {
+    range,
+    analytics,
+    funnel: hasData ? getLessonFunnel(courseId) : [],
+    quizzes: hasData ? getQuizStats(courseId) : [],
+  };
 }
 
 export function HydrateFallback() {
@@ -57,7 +69,7 @@ export function HydrateFallback() {
 }
 
 export default function CourseAnalytics({ loaderData }: Route.ComponentProps) {
-  const { range, analytics } = loaderData;
+  const { range, analytics, funnel, quizzes } = loaderData;
   const { course } = analytics;
   const rangeLabel = RANGE_LABELS[range];
   const hasData = analytics.totalEnrollments > 0;
@@ -103,29 +115,33 @@ export default function CourseAnalytics({ loaderData }: Route.ComponentProps) {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          <Tile
-            title="Gross revenue"
-            scope={`${rangeLabel} · before fees`}
-            value={formatRevenue(analytics.revenue.value)}
-            footer={<ChangeBadge metric={analytics.revenue} />}
-          />
-          <Tile
-            title="New enrollments"
-            scope={rangeLabel}
-            value={analytics.enrollments.value}
-            footer={<ChangeBadge metric={analytics.enrollments} />}
-          />
-          <Tile
-            title="Completion rate"
-            scope="All-time"
-            value={formatPercent(analytics.completionRate)}
-          />
-          <Tile
-            title="Average rating"
-            scope="All-time"
-            value={<RatingValue rating={analytics.averageRating} />}
-          />
+        <div className="space-y-6">
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            <Tile
+              title="Gross revenue"
+              scope={`${rangeLabel} · before fees`}
+              value={formatRevenue(analytics.revenue.value)}
+              footer={<ChangeBadge metric={analytics.revenue} />}
+            />
+            <Tile
+              title="New enrollments"
+              scope={rangeLabel}
+              value={analytics.enrollments.value}
+              footer={<ChangeBadge metric={analytics.enrollments} />}
+            />
+            <Tile
+              title="Completion rate"
+              scope="All-time"
+              value={formatPercent(analytics.completionRate)}
+            />
+            <Tile
+              title="Average rating"
+              scope="All-time"
+              value={<RatingValue rating={analytics.averageRating} />}
+            />
+          </div>
+          <LessonFunnelChart steps={funnel} />
+          <QuizStatsTable rows={quizzes} />
         </div>
       )}
     </div>
