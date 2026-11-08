@@ -11,7 +11,7 @@ Issues and PRDs for this repo live as GitHub issues. Use the `gh` CLI for all op
 - **Apply / remove labels**: `gh issue edit <number> --add-label "..."` / `--remove-label "..."`
 - **Close**: `gh issue close <number> --comment "..."`
 
-Infer the repo from `git remote -v` — `gh` does this automatically when run inside a clone.
+Issues live on `toregu/ai-hero-tore-practice` (the `origin` remote). This clone also has an `upstream` remote (`ai-hero-dev/ai-coding-crash-course`) — never file issues there. `gh repo set-default` points at `origin`; if in doubt, pass `-R toregu/ai-hero-tore-practice` explicitly.
 
 ## Pull requests as a triage surface
 
