@@ -1,4 +1,4 @@
-import { and, eq, gte, inArray, lt, sql } from "drizzle-orm";
+import { and, eq, gte, inArray, lt, sql, type SQL } from "drizzle-orm";
 import { db } from "~/db";
 import type { SQLiteColumn } from "drizzle-orm/sqlite-core";
 import {
@@ -27,7 +27,8 @@ export function parseAnalyticsRange(value: string | null): AnalyticsRange {
 // their historical earnings and outcomes remain visible.
 const INCLUDED_STATUSES = [CourseStatus.Published, CourseStatus.Archived];
 
-function ownedIncludedCourses(instructorId: number) {
+/** Condition on `courses`: owned by the instructor and not a draft. */
+export function ownedIncludedCourses(instructorId: number) {
   return and(
     eq(courses.instructorId, instructorId),
     inArray(courses.status, INCLUDED_STATUSES)
@@ -43,10 +44,10 @@ const RANGE_DAYS: Record<AnalyticsRange, number | null> = {
   all: null,
 };
 
-type Window = { from: string | null; to: string };
+export type Window = { from: string | null; to: string };
 
 /** The selected range, and the equal-length window just before it (none for all time). */
-function windowsFor(range: AnalyticsRange, now: Date) {
+export function windowsFor(range: AnalyticsRange, now: Date) {
   const days = RANGE_DAYS[range];
   const to = now.toISOString();
   if (days === null) {
@@ -67,26 +68,30 @@ function inWindow(column: SQLiteColumn, window: Window) {
   );
 }
 
-function sumRevenue(instructorId: number, window: Window) {
+// The measures below take a `scope` — a condition on `courses` — so the
+// overview (all of an instructor's courses) and the per-course figures share
+// one definition of each metric.
+
+export function sumRevenue(scope: SQL | undefined, window: Window) {
   const row = db
     .select({ total: sql<number>`coalesce(sum(${purchases.amountPaid}), 0)` })
     .from(purchases)
     .innerJoin(courses, eq(purchases.courseId, courses.id))
     .where(
-      and(ownedIncludedCourses(instructorId), inWindow(purchases.createdAt, window))
+      and(scope, inWindow(purchases.createdAt, window))
     )
     .get();
 
   return row?.total ?? 0;
 }
 
-function countEnrollments(instructorId: number, window: Window) {
+export function countEnrollments(scope: SQL | undefined, window: Window) {
   const row = db
     .select({ count: sql<number>`count(*)` })
     .from(enrollments)
     .innerJoin(courses, eq(enrollments.courseId, courses.id))
     .where(
-      and(ownedIncludedCourses(instructorId), inWindow(enrollments.enrolledAt, window))
+      and(scope, inWindow(enrollments.enrolledAt, window))
     )
     .get();
 
@@ -99,7 +104,7 @@ export type RangedMetric = {
   changePercent: number | null;
 };
 
-function rangedMetric(
+export function rangedMetric(
   measure: (window: Window) => number,
   windows: ReturnType<typeof windowsFor>
 ): RangedMetric {
@@ -113,7 +118,7 @@ function rangedMetric(
 }
 
 /** Completed enrollments ÷ all enrollments, all-time. Null when nobody has enrolled. */
-function completionRate(instructorId: number): number | null {
+export function completionRate(scope: SQL | undefined): number | null {
   const row = db
     .select({
       total: sql<number>`count(*)`,
@@ -121,7 +126,7 @@ function completionRate(instructorId: number): number | null {
     })
     .from(enrollments)
     .innerJoin(courses, eq(enrollments.courseId, courses.id))
-    .where(ownedIncludedCourses(instructorId))
+    .where(scope)
     .get();
 
   if (!row || row.total === 0) return null;
@@ -129,12 +134,12 @@ function completionRate(instructorId: number): number | null {
 }
 
 /** Mean star rating, all-time. Null when nobody has rated. */
-function averageRating(instructorId: number): number | null {
+export function averageRating(scope: SQL | undefined): number | null {
   const row = db
     .select({ average: sql<number | null>`avg(${courseRatings.rating})` })
     .from(courseRatings)
     .innerJoin(courses, eq(courseRatings.courseId, courses.id))
-    .where(ownedIncludedCourses(instructorId))
+    .where(scope)
     .get();
 
   return row?.average ?? null;
@@ -156,13 +161,14 @@ export function getInstructorOverview(
   now: Date = new Date()
 ) {
   const windows = windowsFor(range, now);
+  const scope = ownedIncludedCourses(instructorId);
 
   return {
     courseCount: countIncludedCourses(instructorId),
-    revenue: rangedMetric((w) => sumRevenue(instructorId, w), windows),
-    enrollments: rangedMetric((w) => countEnrollments(instructorId, w), windows),
-    completionRate: completionRate(instructorId),
-    averageRating: averageRating(instructorId),
+    revenue: rangedMetric((w) => sumRevenue(scope, w), windows),
+    enrollments: rangedMetric((w) => countEnrollments(scope, w), windows),
+    completionRate: completionRate(scope),
+    averageRating: averageRating(scope),
     unansweredQuestions: getUnansweredQuestions(instructorId).length,
   };
 }

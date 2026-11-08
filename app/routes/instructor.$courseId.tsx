@@ -54,6 +54,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import {
   ArrowLeft,
+  BarChart3,
   BookOpen,
   Clock,
   Eye,
@@ -1172,6 +1173,16 @@ export default function InstructorCourseEditor({
           <span className="text-xs text-muted-foreground">
             Slug: /courses/{course.slug}
           </span>
+          {/* Drafts are left out of analytics, so they get no analytics page. */}
+          {course.status !== CourseStatus.Draft && (
+            <Link
+              to={`/instructor/${course.id}/analytics`}
+              className="flex items-center gap-1.5 font-medium text-primary hover:underline"
+            >
+              <BarChart3 className="size-4" />
+              View analytics
+            </Link>
+          )}
         </div>
       </div>
 
