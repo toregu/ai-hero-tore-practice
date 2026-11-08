@@ -9,14 +9,21 @@ import {
   purchases,
 } from "~/db/schema";
 import { getUnansweredQuestions } from "~/services/commentService";
+import {
+  ANALYTICS_RANGES,
+  DEFAULT_ANALYTICS_RANGE,
+  type AnalyticsRange,
+} from "~/lib/analytics";
 
 // ─── Analytics Service ───
 // Read-only aggregation for the instructor analytics dashboard.
 // Uses positional parameters (project convention).
 
-export const ANALYTICS_RANGES = ["7d", "30d", "90d", "all"] as const;
-export type AnalyticsRange = (typeof ANALYTICS_RANGES)[number];
-export const DEFAULT_ANALYTICS_RANGE: AnalyticsRange = "30d";
+export {
+  ANALYTICS_RANGES,
+  DEFAULT_ANALYTICS_RANGE,
+  type AnalyticsRange,
+} from "~/lib/analytics";
 
 /** Narrows a raw range value to a supported range. Anything unrecognised falls back to the default. */
 export function parseAnalyticsRange(value: string | null): AnalyticsRange {

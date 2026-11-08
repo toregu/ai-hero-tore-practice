@@ -1,10 +1,7 @@
 import { Link, isRouteErrorResponse } from "react-router";
 import { AlertTriangle, Minus, TrendingDown, TrendingUp } from "lucide-react";
-import {
-  ANALYTICS_RANGES,
-  type AnalyticsRange,
-  type RangedMetric,
-} from "~/services/analyticsService";
+import { ANALYTICS_RANGES, type AnalyticsRange } from "~/lib/analytics";
+import type { RangedMetric } from "~/services/analyticsService";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { cn, formatPrice } from "~/lib/utils";
